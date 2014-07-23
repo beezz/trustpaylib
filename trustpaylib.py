@@ -5,15 +5,25 @@
 TrustPay helpers.
 """
 
+import sys
 import hmac
-import urllib
 import hashlib
 import collections
 
+try:
+    unicode
+    from urllib import urlencode
+except NameError:
+    unicode = lambda s: s
+    from urllib.parse import urlencode
 
+#: Default test api url.
 TEST_API_URL = "https://test.trustpay.eu/mapi/paymentservice.aspx"
 
+#: TrustPay service url.
 API_URL = "https://ib.trustpay.eu/mapi/paymentservice.aspx"
+
+#: TrustCard service url.
 TRUSTCARD_API_URL = "https://ib.trustpay.eu/mapi/cardpayments.aspx"
 
 __currencies = (
@@ -21,6 +31,7 @@ __currencies = (
     "USD", "RON", "BGN", "HRK", "LTL", "TRY",
 )
 
+#: Supported currencies.
 CURRENCIES = collections.namedtuple(
     "TrustPayCurrencies",
     __currencies,
@@ -33,6 +44,7 @@ __languages = (
     "uk",
 )
 
+#: Suported languages.
 LANGUAGES = collections.namedtuple(
     "TrustPayLanguages",
     __languages,
@@ -51,11 +63,13 @@ __countries_verbose = (
     "Slovenia", "Turkey", "Finland",
 )
 
+#: Supported countries
 COUNTRIES = collections.namedtuple(
     "TrustPayCountries",
     __countries,
 )(*__countries)
 
+#: Supported countries verbose version.
 COUNTRIES_VERBOSE = collections.namedtuple(
     "TrustPayCountriesVerbose",
     __countries,
@@ -74,6 +88,7 @@ __ResultCodes = collections.namedtuple(
     ]
 )
 
+#: Result codes of redirects and notifications.
 RESULT_CODES = __ResultCodes(
     "0", "1", "2", "3", "4", "5", "1001", "1002", "1003", "1004",
     "1005", "1006", "1007", "1008", "1009", "1100", "1101",
@@ -84,6 +99,8 @@ __rc_desc = collections.namedtuple(
     ["short", "long"],
 )
 
+#: Result codes of redirects and notifications.
+#: In verbose form with short and long description of result code.
 RESLUT_CODES_DESC = {
     RESULT_CODES.SUCCESS: __rc_desc(
         "Success",
@@ -176,6 +193,8 @@ RESLUT_CODES_DESC = {
 }
 
 
+#: TrustPay environment class
+#: Just attributes holder for TrustPay's variables.
 TrustPayEnvironment = collections.namedtuple(
     "TrustPayEnvironment",
     [
@@ -253,6 +272,8 @@ def build_environment(**kw):
 
 
 def sign_message(key, msg):
+    if sys.version_info[0] == 3:
+        msg, key = str.encode(msg), str.encode(key)
     return hmac.new(key, msg, hashlib.sha256).hexdigest().upper()
 
 
@@ -266,6 +287,7 @@ def merge_env_with_request(
     fnc=lambda v1, v2: v1 if v2 is None else v2,
 ):
     kw = {}
+    kw['AID'] = fnc(env.aid, request.AID)
     kw['URL'] = fnc(env.redirect_url, request.URL)
     kw['RURL'] = fnc(env.success_url, request.RURL)
     kw['CURL'] = fnc(env.cancel_url, request.CURL)
@@ -278,12 +300,14 @@ def merge_env_with_request(
 
 
 def _build_link(url, query_dict, fmt="{url}?{params}"):
-    return fmt.format(url=url, params=urllib.urlencode(query_dict))
+    return fmt.format(url=url, params=urlencode(query_dict))
 
 
 def _filter_dict_nones(d):
     res = {}
-    map(lambda v: v if d[v] is None else res.__setitem__(v, d[v]), d)
+    for key, value in d.items():
+        if value is not None:
+            res[key] = value
     return res
 
 
@@ -370,21 +394,16 @@ class TrustPay(object):
         )
 
     def check_notification_signature(self, notification):
-        msg = u"".join(
+        msg = unicode("").join(
             [self.environment.aid, ] +
             extract_attrs(notification, self.NOTIFICATION_SIGNATURE_ATTRS[1:])
         )
-        print (
-            [self.environment.aid, ] +
-            extract_attrs(notification, self.NOTIFICATION_SIGNATURE_ATTRS[1:])
-        )
-        print sign_message(self.environment.secret_key, msg)
         return sign_message(
             self.environment.secret_key, msg) == notification.SIG
 
     @classmethod
     def create_signature_msg(cls, pay_request):
-        return u"".join(
+        return unicode("").join(
             [
                 attr for attr in cls.extract_signature_attrs(pay_request)
                 if attr is not None
@@ -450,6 +469,11 @@ class TrustPay(object):
         for attr in required_attrs:
             if attr not in cls.initial_data(pay_request):
                 missing.append(attr)
+        if pay_request.AMT is not None and '.' in pay_request.AMT:
+            if len(pay_request.AMT.split('.')[1]) > 2:
+                raise ValueError(
+                    "Amount can have at max"
+                    " 2 decimal places. [%s]" % pay_request.AMT)
         if missing:
             raise ValueError("Required attributes missing: %r" % missing)
         cls.validate_currency(pay_request)
