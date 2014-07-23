@@ -4,6 +4,9 @@ trustpaylib
 .. image:: https://travis-ci.org/beezz/trustpaylib.svg?branch=master
     :target: https://travis-ci.org/beezz/trustpaylib
 
+.. image:: https://coveralls.io/repos/beezz/trustpaylib/badge.png
+   :target: https://coveralls.io/r/beezz/trustpaylib 
+
 
 TrustPay payment solution integration helpers.
 
