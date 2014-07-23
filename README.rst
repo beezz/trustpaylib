@@ -1,6 +1,10 @@
 trustpaylib
 ===========
 
+.. image:: https://travis-ci.org/beezz/trustpaylib.svg?branch=master
+    :target: https://travis-ci.org/beezz/trustpaylib
+
+
 TrustPay payment solution integration helpers.
 
 
