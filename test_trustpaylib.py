@@ -6,6 +6,13 @@ import pytest
 
 import trustpaylib
 
+try:
+    unicode
+    py3 = False
+except NameError:
+    py3 = True
+    unicode = lambda s: s
+
 
 class TestTrustPayCore:
 
@@ -64,6 +71,16 @@ class TestTrustPayCore:
         with pytest.raises(ValueError):
             trustpaylib.TrustPay.validate_request(pr)
 
+        pr = trustpaylib.build_pay_request(
+            AID=self.aid,
+            AMT="123.4566",
+            REF="1234567890",
+            CUR="EUR",
+            CNT="tra",
+        )
+        with pytest.raises(ValueError):
+            trustpaylib.TrustPay.validate_request(pr)
+
     def test_cls_creation(self):
         with pytest.raises(ValueError):
             trustpaylib.build_environment(lol='olo')
@@ -72,7 +89,8 @@ class TestTrustPayCore:
             AMT=123.45,
             NURL=None,
         )
-        assert isinstance(pr.AMT, unicode)
+        if not py3:
+            assert isinstance(pr.AMT, unicode)
         assert pr.NURL is None
         assert pr.RURL is None
 
@@ -172,22 +190,22 @@ class TestTrustPayCore:
 
     def test_check_notif_signature(self):
         notification = trustpaylib.build_notification(
-            AID=u"1234567890",
-            TYP=u"CRDT",
-            AMT=u"123.45",
-            CUR=u"EUR",
-            REF=u"9876543210",
-            RES=u"0",
-            TID=u"11111",
-            OID=u"1122334455",
-            TSS=u"Y",
-            SIG=(
-                u"97C92D7A0C0AD99CE5DE55C3597D5ADA"
-                u"0D423991E2D01938BC0F684244814A37"
+            AID=unicode("1234567890"),
+            TYP=unicode("CRDT"),
+            AMT=unicode("123.45"),
+            CUR=unicode("EUR"),
+            REF=unicode("9876543210"),
+            RES=unicode("0"),
+            TID=unicode("11111"),
+            OID=unicode("1122334455"),
+            TSS=unicode("Y"),
+            SIG=unicode(
+                "97C92D7A0C0AD99CE5DE55C3597D5ADA"
+                "0D423991E2D01938BC0F684244814A37"
             )
         )
         env = trustpaylib.build_environment(
-            aid=u"1234567890",
+            aid=unicode("1234567890"),
             secret_key=self.secret_key,
         )
         tp_client = trustpaylib.TrustPay(env)
