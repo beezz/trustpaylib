@@ -71,9 +71,12 @@ Redirects handling
 
 There's not much you can (or should) do with redirect.
 
-.. note:: Official TrustPay documentation: DO NOT PERFORM ANY ACTION ON THIS REDIRECT.
-   Data is not signed and therefore cannot beconsidered as a verified payment result, such
-   as the signed results sent to Notification URL or NotificationEmail.
+.. note::
+
+     Official TrustPay documentation: DO NOT PERFORM ANY ACTION ON THIS REDIRECT.
+     Data is not signed and therefore cannot beconsidered as a verified payment result, such
+     as the signed results sent to Notification URL or NotificationEmail.
+
 
 But at least you can check the result code.
 
@@ -100,18 +103,18 @@ For received notification, first check signature.
 .. code:: pycon
 
     >>> notification_data = {
-    ...     "AID": u"1234567890",
-    ...     "TYP": u"CRDT",
-    ...     "AMT": u"123.45",
-    ...     "CUR": u"EUR",
-    ...     "REF": u"9876543210",
-    ...     "RES": u"0",
-    ...     "TID": u"11111",
-    ...     "OID": u"1122334455",
-    ...     "TSS": u"Y",
+    ...     "AID": "1234567890",
+    ...     "TYP": "CRDT",
+    ...     "AMT": "123.45",
+    ...     "CUR": "EUR",
+    ...     "REF": "9876543210",
+    ...     "RES": "0",
+    ...     "TID": "11111",
+    ...     "OID": "1122334455",
+    ...     "TSS": "Y",
     ...     "SIG": (
-    ...         u"97C92D7A0C0AD99CE5DE55C3597D5ADA"
-    ...         u"0D423991E2D01938BC0F684244814A37"
+    ...         "97C92D7A0C0AD99CE5DE55C3597D5ADA"
+    ...         "0D423991E2D01938BC0F684244814A37"
     ...     ),
     ... }
     >>> notification = trustpaylib.build_notification(**notification_data)
