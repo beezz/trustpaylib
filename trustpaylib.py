@@ -2,7 +2,10 @@
 # vim:fenc=utf-8
 
 """
-TrustPay helpers.
+trustpaylib
+===========
+
+TrustPay payment solution constants and utils.
 """
 
 import sys
@@ -17,7 +20,7 @@ except NameError:
     unicode = lambda s: s
     from urllib.parse import urlencode
 
-#: Default test api url.
+#: Default test service url (TrustCard doesn't have testing service)
 TEST_API_URL = "https://test.trustpay.eu/mapi/paymentservice.aspx"
 
 #: TrustPay service url.
@@ -101,7 +104,7 @@ __rc_desc = collections.namedtuple(
 
 #: Result codes of redirects and notifications.
 #: In verbose form with short and long description of result code.
-RESLUT_CODES_DESC = {
+RESULT_CODES_DESC = {
     RESULT_CODES.SUCCESS: __rc_desc(
         "Success",
         "Payment was successfully processed.",
@@ -321,38 +324,83 @@ def build_link_for_request(url, request):
 
 class TrustPay(object):
 
+    #: Requests attributes from which signature message is
+    #: concatenated (in this specific order).
     SIGNATURE_ATTRS = ("AID", "AMT", "CUR", "REF")
 
+    #: Notification signature attributes.
     NOTIFICATION_SIGNATURE_ATTRS = (
         "AID", "TYP", "AMT", "CUR", "REF",
         "RES", "TID", "OID", "TSS"
     )
 
+    #: Not signed request required attributes.
     REQUEST_REQUIRED_ATTRS = ("AID", "CUR")
 
+    #: Signed request required attributes.
     SIGNED_REQUEST_REQUIRED_ATTRS = REQUEST_REQUIRED_ATTRS + (
         "AMT", "REF", "SIG")
 
+    #: Supported currencies (:attr:`trustpaylib.CURRENCIES`)
     CURRENCIES = CURRENCIES
+
+    #: Supported languages
     LANGUAGES = LANGUAGES
+
+    #: Supported countries
     COUNTRIES = COUNTRIES
+
     RESULT_CODES = RESULT_CODES
-    RESLUT_CODES_DESC = RESLUT_CODES_DESC
+    RESULT_CODES_DESC = RESULT_CODES_DESC
 
     def __init__(self, environment):
         self.environment = environment
 
     def sign_request(self, pay_request):
+        """
+        Sign payment request.
+
+        Args:
+            pay_request (:class:`trustpaylib.TrustPayRequest`):
+                Payment request already prepared for signing.
+
+        Returns:
+            New :class:`trustpaylib.TrustPayRequest` instance
+            with `SIG` attribute set to generated signature.
+        """
         return pay_request._replace(
             SIG=self.pay_request_signature(pay_request))
 
     def pay_request_signature(self, pay_request):
+        """
+        Use environments secret key to generate hash
+        to sign pay request.
+
+        Args:
+            pay_request (:class:`trustpaylib.TrustPayRequest`):
+                Payment request already prepared for signing.
+
+        Returns:
+            Hash.
+        """
         return sign_message(
             self.environment.secret_key,
             self.create_signature_msg(pay_request),
         )
 
     def merge_env_with_request(self, pay_request):
+        """
+        Merge specific attributes of environment with payment request.
+
+        Args:
+            pay_request (:class:`trustpaylib.TrustPayRequest`):
+                Payment request to merge.
+
+        Returns:
+            New :class:`trustpaylib.TrustPayRequest` instance
+            with attributes merged with those in environment
+            if not already set on `pay_request`.
+        """
         return merge_env_with_request(
             self.environment,
             pay_request,
@@ -365,6 +413,23 @@ class TrustPay(object):
         validate=True,
         merge_env=True
     ):
+        """
+        Raw payment request is merged with environment, signed and
+        validated.
+
+        Args:
+            pay_request (:class:`trustpaylib.TrustPayRequest`):
+
+            sign (bool):        If `False`, don't sign pay request.
+
+            validate (bool):    If `False`, don't validate pay request.
+
+            merge_env (bool):    If `False`, don't merge pay request with env.
+
+        Returns:
+            New :class:`trustpaylib.TrustPayRequest` prepared for
+            building link or creating form.
+        """
         pr = pay_request
         if merge_env:
             pr = self.merge_env_with_request(pay_request)
@@ -381,6 +446,21 @@ class TrustPay(object):
         validate=True,
         merge_env=True
     ):
+        """
+        Finalizes raw payment request and generates redirect link.
+
+        Args:
+            pay_request (:class:`trustpaylib.TrustPayRequest`):
+
+            sign (bool):        If `False`, don't sign pay request.
+
+            validate (bool):    If `False`, don't validate pay request.
+
+            merge_env (bool):    If `False`, don't merge pay request with env.
+
+        Returns:
+            string:     Redirect link.
+        """
         return _build_link(
             self.environment.api_url,
             self.initial_data(
@@ -394,6 +474,15 @@ class TrustPay(object):
         )
 
     def check_notification_signature(self, notification):
+        """
+        Check if notification is signed with environment's secret key.
+
+        Args:
+            notification (:class:`trustpaylib.TrustPayNotification`)
+
+        Returns:
+            bool
+        """
         msg = unicode("").join(
             [self.environment.aid, ] +
             extract_attrs(notification, self.NOTIFICATION_SIGNATURE_ATTRS[1:])
@@ -403,6 +492,16 @@ class TrustPay(object):
 
     @classmethod
     def create_signature_msg(cls, pay_request):
+        """
+        Concatenate set of payment request attributes and creates
+        message to be hashed.
+
+        Args:
+            pay_request (:class:`trustpaylib.TrustPayRequest`):
+
+        Returns:
+            string:    Signature message.
+        """
         return unicode("").join(
             [
                 attr for attr in cls.extract_signature_attrs(pay_request)
@@ -412,7 +511,25 @@ class TrustPay(object):
 
     @classmethod
     def get_result_desc(cls, rc):
-        return cls.RESLUT_CODES_DESC[str(rc)]
+        """Returns description of result code.
+
+        Args:
+            rc (int|string):
+                Result code from redirect or notification.
+
+        Returns:
+            Named tuple with `short` and `long` attributes
+            for short, long description.
+            (:attr:`trustpaylib.RESULT_CODES_DESC`)
+
+
+        >>> TrustPay.get_result_desc(1001).short
+        'Invalid request'
+        >>> TrustPay.get_result_desc(1001).long
+        'Data sent is not properly formatted.'
+
+        """
+        return cls.RESULT_CODES_DESC[str(rc)]
 
     @classmethod
     def get_result_desc_from_notification(cls, notif):
@@ -460,6 +577,23 @@ class TrustPay(object):
 
     @classmethod
     def validate_request(cls, pay_request):
+        """Validate payment request.
+
+        Check if all attributes for signed/non-signed payment request
+        are present.  Check if amount has at max two decimal places.
+
+        On validation errors, raises :exc:`ValueError`.
+
+        Args:
+            pay_request (:class:`trustpaylib.TrustPayRequest`):
+
+        Returns:
+            Given `pay_request`.
+
+        Raises:
+            ValueError
+
+        """
         missing = []
         required_attrs = (
             cls.REQUEST_REQUIRED_ATTRS
@@ -488,3 +622,8 @@ class TrustPay(object):
     @staticmethod
     def initial_data(pay_request):
         return _initial_data(pay_request)
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
