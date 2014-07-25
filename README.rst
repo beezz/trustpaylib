@@ -130,3 +130,8 @@ Then check result code.
     'Success'
     >>> trustpay_client.get_result_desc_from_notification(notification).long
     'Payment was successfully processed.'
+
+
+
+
+ `Full documentation <http://trustpaylib.readthedocs.org/en/latest/>`_
