@@ -134,4 +134,4 @@ Then check result code.
 
 
 
- `Full documentation <http://trustpaylib.readthedocs.org/en/latest/>`_
+`Full documentation <http://trustpaylib.readthedocs.org/en/latest/>`_
