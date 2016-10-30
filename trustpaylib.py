@@ -21,10 +21,10 @@ except NameError:
     from urllib.parse import urlencode
 
 #: Default test service url (TrustCard doesn't have testing service)
-TEST_API_URL = "https://test.trustpay.eu/mapi/paymentservice.aspx"
+TEST_API_URL = "https://ib.test.trustpay.eu/mapi/pay.aspx"
 
 #: TrustPay service url.
-API_URL = "https://ib.trustpay.eu/mapi/paymentservice.aspx"
+API_URL = "https://ib.trustpay.eu/mapi/pay.aspx"
 
 #: TrustCard service url.
 TRUSTCARD_API_URL = "https://ib.trustpay.eu/mapi/cardpayments.aspx"
