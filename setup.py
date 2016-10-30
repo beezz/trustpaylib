@@ -9,7 +9,7 @@ with open("README.rst") as f:
     description = f.read()
 
 setup(
-    version="0.0.1",
+    version="0.0.2",
     name="trustpaylib",
     description="TrustPay payments integration library.",
     long_description=description,
