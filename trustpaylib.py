@@ -17,7 +17,8 @@ try:
     unicode
     from urllib import urlencode
 except NameError:
-    unicode = lambda s: s
+    def unicode(s):
+        return s
     from urllib.parse import urlencode
 
 #: Default test service url (TrustCard doesn't have testing service)
